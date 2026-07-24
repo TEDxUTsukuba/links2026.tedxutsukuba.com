@@ -164,13 +164,9 @@
             background: rgba(255, 255, 255, 0.7);
             border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 6px;
-            padding: 16px 12px;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            min-height: 148px;
+            position: relative;
+            overflow: hidden;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
@@ -180,16 +176,33 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
         }
 
+        .partner-logo-frame {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            bottom: 42px;
+            left: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
         .partner-logo-box img {
-            max-width: 100%;
-            max-height: 56px;
-            width: auto;
-            height: auto;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
+            object-position: center;
             display: block;
+            transform: scale(var(--logo-scale, 1));
+            transform-origin: center;
         }
 
         .partner-logo-box .partner-logo-fallback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 48px;
             height: 48px;
             border-radius: 8px;
@@ -203,12 +216,49 @@
         }
 
         .partner-logo-box span {
+            position: absolute;
+            right: 8px;
+            bottom: 9px;
+            left: 8px;
             font-size: 0.78rem;
             font-weight: bold;
             color: #2b261f;
             text-align: center;
             line-height: 1.35;
             word-break: break-word;
+        }
+
+        /* 全シーン共通の言語切り替え */
+        #language-toggle {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 40;
+            min-width: 76px;
+            height: 38px;
+            padding: 0 14px;
+            border: 1px solid rgba(212, 175, 55, 0.7);
+            border-radius: 999px;
+            background: rgba(13, 12, 11, 0.86);
+            color: #e5c65c;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            touch-action: manipulation;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+            transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+        }
+
+        #language-toggle:hover,
+        #language-toggle:focus-visible {
+            background: #d4af37;
+            color: #0d0c0b;
+            outline: none;
+            transform: translateY(-1px);
         }
 
         /* アンティーク調閉じるボタン */
@@ -358,16 +408,21 @@
                 grid-template-columns: repeat(2, 1fr) !important;
             }
             #content-overlay .partner-logo-box {
-                padding: 12px !important;
-                gap: 6px !important;
-                min-height: 110px !important;
+                min-height: 132px !important;
+            }
+            #content-overlay .partner-logo-frame {
+                top: 10px;
+                right: 10px;
+                bottom: 38px;
+                left: 10px;
             }
             #content-overlay .partner-logo-box img {
-                max-width: 100% !important;
-                max-height: 48px !important;
+                width: 100% !important;
+                height: 100% !important;
             }
             #content-overlay .partner-logo-box span {
                 font-size: 0.7rem !important;
+                bottom: 7px;
             }
             
             /* コメント掲示板 */
@@ -392,6 +447,15 @@
                 height: 38px;
                 font-size: 16px;
             }
+
+            #language-toggle {
+                top: 15px;
+                left: 15px;
+                min-width: 68px;
+                height: 36px;
+                padding: 0 12px;
+                font-size: 0.7rem;
+            }
         }
 
         /* ==========================================
@@ -413,7 +477,7 @@
         }
 
         .opening-prompt-text {
-            margin-top: 130px; /* 波紋の下に配置 (少し下方に移動) */
+            margin-top: 200px; /* 波紋の下に配置 (少し下方に移動) */
             font-size: 1.1rem;
             letter-spacing: 0.15em;
             color: #d4af37; /* ゴールド */
@@ -499,6 +563,7 @@
 <body>
 
     <div id="loader">LOADING...</div>
+    <button id="language-toggle" type="button" aria-label="Switch to English">EN</button>
     <div id="canvas-container"></div>
     <div id="fade-overlay"></div>
 
@@ -518,7 +583,7 @@
 
     <!-- 開いた本の中身を表示するコンテナ & 閉じるボタン -->
     <div id="content-overlay"></div>
-    <button id="close-button" onclick="closeActiveBook()">✕</button>
+    <button id="close-button" type="button" aria-label="本棚に戻る" title="本棚に戻る" onclick="closeActiveBook()">✕</button>
 
     <script>
         // ==========================================
@@ -529,32 +594,161 @@
         const BOOK_THICKNESS = 0.5;
         const COVER_T = 0.08; // 表紙の厚み
 
+        const I18N = {
+            ja: {
+                loading: "読み込み中…",
+                openBook: "タッチで本を開く",
+                selectBook: "本を選択してください（2タップで開く）",
+                switchLanguage: "Switch to English",
+                switchLabel: "EN",
+                closeBook: "本棚に戻る",
+                partnersHeading: "パートナー",
+                partnersLead: "本イベントにてご協賛いただいたPartner企業を紹介します。",
+                partnersBody: "ご協賛いただいたフード・ドリンクは、アフターパーティーにてお召し上がりいただけます。",
+                surveyHeading: "アンケート",
+                surveyOpening: "アンケートページを開きます。",
+                surveyFallback: "自動的に開かない場合は、右側のボタンをクリックしてアンケートを直接開いてください。",
+                surveyIntro: "イベントに関するアンケートにご協力をお願いいたします。",
+                surveyDescription: "皆様からの貴重なフィードバックは、今後のサロンイベントの品質向上やアイデア共有の場の改善に役立てられます。",
+                openSurvey: "アンケートを開く",
+                name: "お名前",
+                namePlaceholder: "筑波 太郎",
+                email: "メールアドレス",
+                eventRating: "今回のイベントはいかがでしたか？",
+                ratingExcellent: "大変満足",
+                ratingGood: "満足",
+                ratingAverage: "普通",
+                ratingNeedsWork: "改善の余地あり",
+                feedback: "ご意見・メッセージ",
+                feedbackPlaceholder: "ご意見をご記入ください…",
+                submit: "送信する",
+                surveySubmitted: "アンケートが送信されました（デモ）",
+                questionHeading: "質問",
+                questionOpening: "質問フォームを開きます。",
+                questionDescription: "スピーカーや運営への質問は、こちらのフォームからお送りください。自動的に開かない場合は、右側のボタンから直接開いてください。",
+                openQuestion: "質問フォームを開く",
+                commentsOpening: "CommentScreenを開きます。",
+                commentsFallback: "自動的に開かない場合は、右側のボタンをクリックして直接開いてください。",
+                openComments: "CommentScreenを開く",
+                commentBoard: "コメントボード",
+                writeComment: "コメントを書き込む",
+                nickname: "名前",
+                nicknamePlaceholder: "ニックネーム",
+                message: "メッセージ",
+                messagePlaceholder: "コメント内容を入力してください…",
+                post: "投稿する",
+                justNow: "たった今",
+                guestA: "ゲストA",
+                guestAComment: "素晴らしいプレゼンテーションでした！刺激を受けました。",
+                guestB: "筑波 花子",
+                guestBComment: "本の3Dアニメーションが非常に美しくて驚きました！",
+                graduateStudent: "大学院生",
+                graduateComment: "TEDxの次のイベント日程を知りたいです。",
+                tenMinutesAgo: "10分前",
+                oneHourAgo: "1時間前",
+                threeHoursAgo: "3時間前",
+                socialsHeading: "公式アカウント",
+                socialsLead: "TEDxUTsukubaの最新情報を受け取るために、各種SNSアカウントのフォローをお願いいたします。",
+                socialsBody: "イベント写真の公開や、スピーカー紹介、次回の参加申し込みのご案内などを随時アップデートしています。",
+                officialWebsite: "公式ウェブサイト"
+            },
+            en: {
+                loading: "LOADING…",
+                openBook: "TOUCH TO OPEN",
+                selectBook: "Select a book (tap twice to open)",
+                switchLanguage: "日本語に切り替える",
+                switchLabel: "日本語",
+                closeBook: "Return to the bookshelf",
+                partnersHeading: "Our Partners",
+                partnersLead: "We would like to introduce the partner companies sponsoring this event.",
+                partnersBody: "Please enjoy the food and drinks provided by our sponsors at the after-party.",
+                surveyHeading: "Questionnaire",
+                surveyOpening: "Opening the questionnaire.",
+                surveyFallback: "If it does not open automatically, use the button on the right to open it directly.",
+                surveyIntro: "Please share your feedback about the event.",
+                surveyDescription: "Your feedback helps us improve future Salon events and create a better place for sharing ideas.",
+                openSurvey: "Open questionnaire",
+                name: "Name",
+                namePlaceholder: "Your name",
+                email: "Email address",
+                eventRating: "How was today's event?",
+                ratingExcellent: "Excellent",
+                ratingGood: "Good",
+                ratingAverage: "Average",
+                ratingNeedsWork: "Needs improvement",
+                feedback: "Feedback / Message",
+                feedbackPlaceholder: "Share your thoughts…",
+                submit: "Submit",
+                surveySubmitted: "Questionnaire submitted (demo)",
+                questionHeading: "Question",
+                questionOpening: "Opening the question form.",
+                questionDescription: "Send questions for the speakers or organizers through this form. If it does not open automatically, use the button on the right.",
+                openQuestion: "Open question form",
+                commentsOpening: "Opening CommentScreen.",
+                commentsFallback: "If it does not open automatically, use the button on the right to open it directly.",
+                openComments: "Open CommentScreen",
+                commentBoard: "Comment Board",
+                writeComment: "Write a comment",
+                nickname: "Name",
+                nicknamePlaceholder: "Nickname",
+                message: "Message",
+                messagePlaceholder: "Write your comment…",
+                post: "Post",
+                justNow: "Just now",
+                guestA: "Guest A",
+                guestAComment: "What an inspiring presentation!",
+                guestB: "Hanako Tsukuba",
+                guestBComment: "The 3D book animation is beautiful—I was amazed!",
+                graduateStudent: "Graduate student",
+                graduateComment: "I would love to know the date of the next TEDx event.",
+                tenMinutesAgo: "10 min ago",
+                oneHourAgo: "1 hour ago",
+                threeHoursAgo: "3 hours ago",
+                socialsHeading: "Social Accounts",
+                socialsLead: "Follow TEDxUTsukuba on social media for the latest updates.",
+                socialsBody: "We share event photos, speaker introductions, and registration details for upcoming events.",
+                officialWebsite: "Official Website"
+            }
+        };
+
+        let currentLanguage = "ja";
+        try {
+            const savedLanguage = localStorage.getItem("tedx-language");
+            if (savedLanguage === "ja" || savedLanguage === "en") currentLanguage = savedLanguage;
+        } catch (error) {
+            // file:// などストレージが利用できない環境でも表示を継続する
+        }
+
+        function t(key) {
+            return I18N[currentLanguage][key] ?? key;
+        }
+
         // ==========================================
         // 外部遷移先URL設定（空文字の場合は通常の見開きコンテンツを表示）
         // ==========================================
         const EXTERNAL_LINKS = {
-            survey: "", // アンケート（空文字の場合はインラインフォームを表示）
+            survey: "https://docs.google.com/forms/d/e/1FAIpQLSdI7vu1FS-JrUh9rM97IBKoTJDUkktDjpjavnv589GgWagubg/viewform?usp=header", // サンプルURL（本番のアンケートURLへ差し替え）
             question: "https://docs.google.com/forms/d/e/1FAIpQLScaeuOTs5mHETIgmaDdw3KHDk7LapCLIhsipASdHe2_K04xFA/viewform?usp=header", // Question フォーム
             comments: "https://commentscreen.example.com"                                 // コメントスクリーンの外部URL（ユーザーが変更可能）
         };
 
         // 本の情報定義（タイトル、背表紙用英語、カバーのベース色、遷移URL/コンテンツキー）
         const BOOKS_DATA = [
-            { title: "パートナー\nOur Partners", spineTitle: "Partners", color: "#4a121a", url: "partners", isActive: true },   // バーガンディレッド
-            { title: "アンケート\nQuestionnaire", spineTitle: "Survey", color: "#112233", url: "survey", isActive: true },       // ロイヤルネイビー
-            { title: "質問\nQuestion", spineTitle: "Question", color: "#1a3352", url: "question", isActive: true },              // ディープブルー
-            { title: "Comment\nScreen", spineTitle: "CommentzScreen", color: "#142d1f", url: "comments", isActive: true },      // フォレストグリーン
-            { title: "アカウント\nSocial Accounts", spineTitle: "Socials", color: "#4f3613", url: "socials", isActive: true }    // アンバーゴールド
+            { title: "CommentScreen", spineTitle: "CommentScreen", color: "#142d1f", url: "comments", isActive: true },
+            { title: "Question", spineTitle: "Question", color: "#1a3352", url: "question", isActive: true },
+            { title: "Survey", spineTitle: "Survey", color: "#112233", url: "survey", isActive: true },
+            { title: "Partners", spineTitle: "Partners", color: "#4a121a", url: "partners", isActive: true },
+            { title: "Social Accounts", spineTitle: "Social Accounts", color: "#4f3613", url: "socials", isActive: true }
         ];
 
         // 本棚を埋めるダミーの本を含めた全体のレイアウト順
         const SHELF_LAYOUT = [
             { title: "アーカイブ\nArchive Vol.1", spineTitle: "Archive I", color: "#2b3d30", url: "dummy1", isActive: false },
             { title: "アーカイブ\nArchive Vol.2", spineTitle: "Archive II", color: "#324436", url: "dummy2", isActive: false },
-            BOOKS_DATA[0], // Partners
-            BOOKS_DATA[1], // Survey
-            BOOKS_DATA[2], // Question
-            BOOKS_DATA[3], // Comments
+            BOOKS_DATA[0], // CommentScreen
+            BOOKS_DATA[1], // Question
+            BOOKS_DATA[2], // Survey
+            BOOKS_DATA[3], // Partners
             BOOKS_DATA[4], // Socials
             { title: "ギャラリー\nPortfolio", spineTitle: "Portfolio", color: "#1e3240", url: "dummy3", isActive: false },
             { title: "エッセイ\nEssays", spineTitle: "Essays", color: "#4a3525", url: "dummy4", isActive: false }
@@ -563,16 +757,16 @@
         // パートナー企業一覧（フォルダ名＝会社名、logo は partners/ 配下の画像）
         // 画像がない場合は logo: null で社名のみ表示
         const PARTNERS = [
-            { name: "TRATTORIA E PIZZERIA AMICI", logo: "partners/AMICI.png" },
-            { name: "株式会社サイエンスアーツ", logo: "partners/Buddycom.png" },
-            { name: "CommentScreen株式会社", logo: "partners/CommentScreen.png" },
-            { name: "お醤油屋さんのおせんべい本舗", logo: "partners/お醤油屋さんのおせんべい本舗.jpeg" },
-            { name: "ヨシムラミート", logo: "partners/ヨシムラミートロゴ.jpg"},
-            { name: "朝日印刷株式会社", logo: "partners/朝日印刷.jpg" },
-            { name: "東京フード株式会社", logo: "partners/東京フード.png" },
-            { name: "有限会社筑波ハム", logo: "partners/筑波ハム.png" },
-            { name: "ジミーfarm合同会社", logo: "partners/ジミーfarm_logo.jpg" },
-            { name: "沼田屋本店", logo: "partners/沼田屋本店_logo.png" }
+            { name: "TRATTORIA E PIZZERIA AMICI", logo: "partners/AMICI_logo.png", logoScale: 1.00 },
+            { name: "株式会社サイエンスアーツ", logo: "partners/Buddycom.png", logoScale: 1.12 },
+            { name: "CommentScreen株式会社", logo: "partners/CommentScreen.png", logoScale: 1.50 },
+            { name: "お醤油屋さんのおせんべい本舗", logo: "partners/お醤油屋さんのおせんべい本舗.jpeg", logoScale: 1.00 },
+            { name: "ヨシムラミート", logo: "partners/ヨシムラミートロゴ.jpg", logoScale: 1.00 },
+            { name: "朝日印刷株式会社", logo: "partners/朝日印刷.jpg", logoScale: 1.16 },
+            { name: "東京フード株式会社", logo: "partners/東京フード.png", logoScale: 1.00 },
+            { name: "有限会社筑波ハム", logo: "partners/筑波ハム.png", logoScale: 1.00 },
+            { name: "ジミーfarm合同会社", logo: "partners/ジミーfarm_logo.jpg", logoScale: 1.00 },
+            { name: "沼田屋本店", logo: "partners/沼田屋本店_logo.png", logoScale: 2.00 }
         ];
 
         // グローバル変数
@@ -587,6 +781,7 @@
         let isTransitioning = false; // シーン遷移中フラグ
         let currentScene = 'opening'; // 'opening' or 'bookshelf'
         let isOpeningClicked = false; // オープニング中のクリック重複防止フラグ
+        let currentContentKey = null; // 言語切り替え時に開いている内容を再描画
 
         // レイキャスター（マウス・タッチとの衝突判定用）
         const raycaster = new THREE.Raycaster();
@@ -804,16 +999,9 @@
                         const cleanText = text.replace(/\n|\\n/g, " ").toUpperCase();
                         const chars = cleanText.split("");
 
-                        let fontSize = 76;
-                        let lineHeight = 86;
-                        if (chars.length > 8) {
-                            fontSize = 56;
-                            lineHeight = 64;
-                        }
-                        if (chars.length > 12) {
-                            fontSize = 40;
-                            lineHeight = 46;
-                        }
+                        // 全タイトルを最長の CommentScreen と同じ文字サイズに揃える
+                        const fontSize = 40;
+                        const lineHeight = 46;
 
                         colorCtx.font = `bold ${fontSize}px Georgia, serif`;
                         maskCtx.font = `bold ${fontSize}px Georgia, serif`;
@@ -913,11 +1101,77 @@
         // 3D 本モデル（メッシュ）の構築
         // ==========================================
 
-        function createBook(title, colorHex, spineText) {
+        function getLocalizedBookTitle(bookInfo) {
+            return currentLanguage === "ja" && bookInfo.titleJa ? bookInfo.titleJa : bookInfo.title;
+        }
+
+        function getLocalizedSpineTitle(bookInfo) {
+            return currentLanguage === "ja" && bookInfo.spineTitleJa ? bookInfo.spineTitleJa : bookInfo.spineTitle;
+        }
+
+        function replaceMaterialMaps(material, maps) {
+            const oldTextures = new Set([
+                material.map,
+                material.metalnessMap,
+                material.roughnessMap,
+                material.bumpMap
+            ].filter(Boolean));
+
+            material.map = maps.map;
+            material.metalnessMap = maps.metalnessMap;
+            material.roughnessMap = maps.roughnessMap;
+            material.bumpMap = maps.map;
+            material.needsUpdate = true;
+
+            oldTextures.forEach((texture) => texture.dispose());
+        }
+
+        function updateBookshelfLanguage() {
+            shelfBooks.forEach((book) => {
+                const bookInfo = book.userData.bookInfo;
+                if (!bookInfo || !bookInfo.isActive) return;
+
+                const spineMaps = createBookMaterialMaps(getLocalizedSpineTitle(bookInfo), bookInfo.color, true);
+                const coverMaps = createBookMaterialMaps(getLocalizedBookTitle(bookInfo), bookInfo.color, false);
+                replaceMaterialMaps(book.userData.spineMaterial, spineMaps);
+                replaceMaterialMaps(book.userData.coverMaterial, coverMaps);
+            });
+        }
+
+        function applyLanguage() {
+            document.documentElement.lang = currentLanguage;
+            document.getElementById("loader").textContent = t("loading");
+            document.querySelector(".opening-prompt-text").textContent = t("openBook");
+            document.getElementById("instruction-tip").textContent = t("selectBook");
+
+            const languageToggle = document.getElementById("language-toggle");
+            languageToggle.textContent = t("switchLabel");
+            languageToggle.setAttribute("aria-label", t("switchLanguage"));
+            languageToggle.title = t("switchLanguage");
+
+            const closeButton = document.getElementById("close-button");
+            closeButton.setAttribute("aria-label", t("closeBook"));
+            closeButton.title = t("closeBook");
+
+            if (shelfBooks.length > 0) updateBookshelfLanguage();
+            if (isBookOpen && currentContentKey) setupBookContent(currentContentKey);
+        }
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === "ja" ? "en" : "ja";
+            try {
+                localStorage.setItem("tedx-language", currentLanguage);
+            } catch (error) {
+                // ストレージが利用できない環境でも切り替え自体は継続する
+            }
+            applyLanguage();
+        }
+
+        function createBook(title, colorHex, spineText, explicitBookInfo = null) {
             const bookGroup = new THREE.Group();
 
             // もしこの本がダミー本（SHELF_LAYOUTで isActive: false）なら、テキスト描画を無効化する
-            const bookInfo = SHELF_LAYOUT.find(b => b.title === title || b.spineTitle === spineText);
+            const bookInfo = explicitBookInfo || SHELF_LAYOUT.find(b => b.title === title || b.spineTitle === spineText);
             const drawTitle = (bookInfo && !bookInfo.isActive) ? "" : title;
             const drawSpine = (bookInfo && !bookInfo.isActive) ? "" : spineText;
 
@@ -1041,7 +1295,10 @@
                 hinge: frontCoverHinge,
                 title: title,
                 url: bookInfo?.url || "#",
-                isActive: bookInfo ? bookInfo.isActive : true
+                isActive: bookInfo ? bookInfo.isActive : true,
+                bookInfo,
+                spineMaterial: spineMat,
+                coverMaterial: coverMat
             };
 
             return bookGroup;
@@ -1125,6 +1382,8 @@
         // 画面比率（アスペクト比）に応じたカメラ調整
         // ==========================================
         function adjustSceneForViewport() {
+            if (!camera || !renderer) return;
+
             const width = window.innerWidth;
             const height = window.innerHeight;
             const aspect = width / height;
@@ -1168,6 +1427,7 @@
 
         function init() {
             const container = document.getElementById('canvas-container');
+            applyLanguage();
 
             // 1. シーン作成
             scene = new THREE.Scene();
@@ -1182,17 +1442,17 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.0;
+            renderer.toneMappingExposure = 1.06;
             container.appendChild(renderer.domElement);
 
             // ==========================================
             // ライティングのセットアップ
             // ==========================================
             
-            ambientLight = new THREE.AmbientLight('#2a1e15', 1.2);
+            ambientLight = new THREE.AmbientLight('#2f2218', 1.25);
             scene.add(ambientLight);
 
-            spotLight = new THREE.SpotLight('#ffeedd', 4.5);
+            spotLight = new THREE.SpotLight('#ffeedd', 4.7);
             spotLight.position.set(5, 8, 8);
             spotLight.angle = Math.PI / 4;
             spotLight.penumbra = 0.8;
@@ -1202,7 +1462,7 @@
             spotLight.shadow.bias = -0.001;
             scene.add(spotLight);
 
-            const dirLight = new THREE.DirectionalLight('#443322', 1.0);
+            const dirLight = new THREE.DirectionalLight('#4f3b31', 1.05);
             dirLight.position.set(-6, -2, 4);
             scene.add(dirLight);
 
@@ -1211,7 +1471,7 @@
             // ==========================================
 
             // A. 【オープニングシーン】の本の配置
-            openingBookGroup = createBook("TEDxUTsukuba Salon\nLibrary", "#261a15", "TEDxUTsukuba");
+            openingBookGroup = createBook("TEDxUTsukuba \nSalon 2026\n\nLibrary", "#261a15", "TEDxUTsukuba");
             openingBookGroup.position.set(0, 0, 0);
             openingBookGroup.rotation.set(0.1, -0.2, 0.05);
             scene.add(openingBookGroup);
@@ -1373,7 +1633,12 @@
             const startX = - (totalBooks - 1) * spacing / 2; 
 
             SHELF_LAYOUT.forEach((data, index) => {
-                const book = createBook(data.title, data.color, data.spineTitle);
+                const book = createBook(
+                    getLocalizedBookTitle(data),
+                    data.color,
+                    getLocalizedSpineTitle(data),
+                    data
+                );
                 
                 // 背表紙が手前を向くように回転
                 book.rotation.set(0, Math.PI / 2, 0);
@@ -1412,7 +1677,7 @@
             });
 
             // ライト再調整
-            spotLight.intensity = 3.5;
+            spotLight.intensity = 3.7;
             spotLight.position.set(0, 5, 6);
             spotLight.target = bookshelfGroup;
 
@@ -1532,6 +1797,19 @@
             });
         }
 
+        function openExternalLink(extUrl) {
+            const usesCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+            const usesMobileViewport = window.innerWidth <= 768;
+
+            if (usesCoarsePointer || usesMobileViewport) {
+                // モバイルでは遅延した window.open がブロックされるため、
+                // 開本完了後に現在のタブで確実に遷移する
+                window.location.assign(extUrl);
+            } else {
+                window.open(extUrl, "_blank", "noopener,noreferrer");
+            }
+        }
+
         // マウスクリックおよびタッチ操作の共通ハンドラー (pointerdownに統一して多重発火を排除)
         function handlePointerDown(event) {
             // オープニングシーンでのタップ（波紋クリック）時の処理
@@ -1633,8 +1911,16 @@
                 ? (aspect < 0.46 ? 1.1 + 3.62 / 0.46 : 1.1 + 3.62 / aspect)
                 : 4.5; // 初期本棚カメラ位置と完全同期し、前後のガチャガチャした動きを抑制
 
-            // 先に見開きコンテンツを挿入しておく (フェードイン時にすぐ表示されるようにする)
-            setupBookContent(targetBook.userData.url);
+            const contentKey = targetBook.userData.url;
+            const externalUrl = EXTERNAL_LINKS[contentKey];
+
+            // 外部リンクの場合は本が完全に開くまで案内文を挿入しない
+            if (externalUrl) {
+                document.getElementById('content-overlay').innerHTML = '';
+                currentContentKey = null;
+            } else {
+                setupBookContent(contentKey);
+            }
 
             const clickTl = gsap.timeline();
 
@@ -1699,10 +1985,10 @@
                     isTransitioning = false;
                 },
                 onComplete: () => {
-                    // 完全に本が開ききったタイミングで外部URLがあれば別タブで遷移
-                    const extUrl = EXTERNAL_LINKS[targetBook.userData.url];
-                    if (extUrl && isBookOpen && openedBook === targetBook) {
-                        window.open(extUrl, '_blank');
+                    // 完全に本が開ききってから案内を生成し、外部URLへ遷移
+                    if (externalUrl && isBookOpen && openedBook === targetBook) {
+                        setupBookContent(contentKey);
+                        openExternalLink(externalUrl);
                     }
                 }
             }, "-=0.6");
@@ -1742,6 +2028,7 @@
                     activeBook = null;
                     openedBook = null;
                     isBookOpen = false;
+                    currentContentKey = null;
                     isClosingBook = false;
                     isTransitioning = false;
                     document.body.style.cursor = 'default';
@@ -1841,8 +2128,10 @@
             const name = partner.name;
             const initial = name.trim().charAt(0) || '?';
             const logoHtml = partner.logo
-                ? `<img src="${partner.logo}" alt="${name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                   <div class="partner-logo-fallback" style="display:none;">${initial}</div>`
+                ? `<div class="partner-logo-frame">
+                       <img src="${partner.logo}" alt="${name}" loading="lazy" style="--logo-scale:${partner.logoScale || 1};" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                       <div class="partner-logo-fallback" style="display:none;">${initial}</div>
+                   </div>`
                 : `<div class="partner-logo-fallback">${initial}</div>`;
 
             return `
@@ -1868,7 +2157,7 @@
             }
 
             return `
-                <a href="${url}" target="_blank" style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.75); border: 1px solid rgba(0,0,0,0.06); padding: 14px 20px; border-radius: 8px; text-decoration: none; color: #2b261f; font-weight: bold; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.02);" onmouseover="this.style.background='rgba(255,255,255,0.95)'; this.style.borderColor='${brandColor}'; this.style.boxShadow='0 6px 15px rgba(0,0,0,0.06)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'; this.style.borderColor='rgba(0,0,0,0.06)'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.02)'; this.style.transform='none'">
+                <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.75); border: 1px solid rgba(0,0,0,0.06); padding: 14px 20px; border-radius: 8px; text-decoration: none; color: #2b261f; font-weight: bold; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.02);" onmouseover="this.style.background='rgba(255,255,255,0.95)'; this.style.borderColor='${brandColor}'; this.style.boxShadow='0 6px 15px rgba(0,0,0,0.06)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,0.75)'; this.style.borderColor='rgba(0,0,0,0.06)'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.02)'; this.style.transform='none'">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="${brandColor}" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
                         ${svgIcon}
                     </svg>
@@ -1900,7 +2189,7 @@
             if (!nameInput.value || !textInput.value) return;
 
             const newItem = document.createElement('div');
-            newItem.innerHTML = createCommentItem(nameInput.value, textInput.value, "たった今");
+            newItem.innerHTML = createCommentItem(nameInput.value, textInput.value, t("justNow"));
             container.insertBefore(newItem.firstElementChild, container.firstChild);
 
             container.scrollTop = 0;
@@ -1908,9 +2197,14 @@
             textInput.value = '';
         }
 
+        function handleSurveySubmit() {
+            alert(t("surveySubmitted"));
+        }
+
         // 見開きコンテンツの生成 (透過化に伴いロゴグリッド等にクラス名を適用)
         function setupBookContent(url) {
             const overlay = document.getElementById('content-overlay');
+            currentContentKey = url;
             overlay.innerHTML = ''; 
 
             const leftSide = document.createElement('div');
@@ -1920,12 +2214,12 @@
 
             if (url === 'partners') {
                 leftSide.innerHTML = `
-                    <h2 style="font-size: 1.6rem; color: #4a121a; margin-bottom: 20px; border-bottom: 2px solid rgba(74, 18, 26, 0.1); padding-bottom: 10px;">Our Partners</h2>
+                    <h2 style="font-size: 1.6rem; color: #4a121a; margin-bottom: 20px; border-bottom: 2px solid rgba(74, 18, 26, 0.1); padding-bottom: 10px;">${t("partnersHeading")}</h2>
                     <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                        TEDxUTsukuba Salonの活動を支えてくださっている、素晴らしいパートナー企業の皆様です。
+                        ${t("partnersLead")}
                     </p>
                     <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                        私たちは「広めるべきアイデア」を共有するために、志を同じくするローカル企業やグローバルブランドと連携しています。
+                        ${t("partnersBody")}
                     </p>
                 `;
 
@@ -1938,73 +2232,73 @@
                 const extUrl = EXTERNAL_LINKS.survey;
                 if (extUrl) {
                     leftSide.innerHTML = `
-                        <h2 style="font-size: 1.6rem; color: #112233; margin-bottom: 20px; border-bottom: 2px solid rgba(17, 34, 51, 0.1); padding-bottom: 10px;">Questionnaire</h2>
+                        <h2 style="font-size: 1.6rem; color: #112233; margin-bottom: 20px; border-bottom: 2px solid rgba(17, 34, 51, 0.1); padding-bottom: 10px;">${t("surveyHeading")}</h2>
                         <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                            アンケートページを別タブで開いています。
+                            ${t("surveyOpening")}
                         </p>
                         <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                            ポップアップブロックなどで自動的に開かない場合は、右側のボタンをクリックしてアンケートを直接開いてください。
+                            ${t("surveyFallback")}
                         </p>
                     `;
 
                     rightSide.innerHTML = `
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 15px; width: 100%;">
-                            <a href="${extUrl}" target="_blank" style="display: inline-block; background: #112233; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(17, 34, 51, 0.2); transition: opacity 0.2s; text-align: center;">アンケートを開く</a>
+                            <a href="${extUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #112233; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(17, 34, 51, 0.2); transition: opacity 0.2s; text-align: center;">${t("openSurvey")}</a>
                         </div>
                     `;
                 } else {
                     leftSide.innerHTML = `
-                        <h2 style="font-size: 1.6rem; color: #112233; margin-bottom: 20px; border-bottom: 2px solid rgba(17, 34, 51, 0.1); padding-bottom: 10px;">Questionnaire</h2>
+                        <h2 style="font-size: 1.6rem; color: #112233; margin-bottom: 20px; border-bottom: 2px solid rgba(17, 34, 51, 0.1); padding-bottom: 10px;">${t("surveyHeading")}</h2>
                         <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                            イベントに関するアンケートにご協力をお願いいたします。
+                            ${t("surveyIntro")}
                         </p>
                         <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                            皆様からの貴重なフィードバックは、今後のサロンイベントの品質向上やアイデア共有の場の改善に役立てられます。
+                            ${t("surveyDescription")}
                         </p>
                     `;
 
                     rightSide.innerHTML = `
-                        <form onsubmit="event.preventDefault(); alert('アンケートが送信されました（デモ）');" style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
+                        <form onsubmit="event.preventDefault(); handleSurveySubmit();" style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">お名前</label>
-                                <input type="text" placeholder="筑波 太郎" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">${t("name")}</label>
+                                <input type="text" placeholder="${t("namePlaceholder")}" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">メールアドレス</label>
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">${t("email")}</label>
                                 <input type="email" placeholder="example@tsukuba.ac.jp" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">今回のイベントはいかがでしたか？</label>
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">${t("eventRating")}</label>
                                 <select style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
-                                    <option>大変満足</option>
-                                    <option>満足</option>
-                                    <option>普通</option>
-                                    <option>改善の余地あり</option>
+                                    <option>${t("ratingExcellent")}</option>
+                                    <option>${t("ratingGood")}</option>
+                                    <option>${t("ratingAverage")}</option>
+                                    <option>${t("ratingNeedsWork")}</option>
                                 </select>
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">ご意見・メッセージ</label>
-                                <textarea rows="3" placeholder="ご意見をご記入ください..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit; resize: none;"></textarea>
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #112233;">${t("feedback")}</label>
+                                <textarea rows="3" placeholder="${t("feedbackPlaceholder")}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit; resize: none;"></textarea>
                             </div>
-                            <button type="submit" style="background: #112233; color: #faf6ee; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; transition: opacity 0.2s;">送信する</button>
+                            <button type="submit" style="background: #112233; color: #faf6ee; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; transition: opacity 0.2s;">${t("submit")}</button>
                         </form>
                     `;
                 }
             } else if (url === 'question') {
                 const extUrl = EXTERNAL_LINKS.question;
                 leftSide.innerHTML = `
-                    <h2 style="font-size: 1.6rem; color: #1a3352; margin-bottom: 20px; border-bottom: 2px solid rgba(26, 51, 82, 0.1); padding-bottom: 10px;">Question</h2>
+                    <h2 style="font-size: 1.6rem; color: #1a3352; margin-bottom: 20px; border-bottom: 2px solid rgba(26, 51, 82, 0.1); padding-bottom: 10px;">${t("questionHeading")}</h2>
                     <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                        質問フォームを別タブで開いています。
+                        ${t("questionOpening")}
                     </p>
                     <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                        スピーカーや運営への質問は、こちらのフォームからお送りください。ポップアップブロックなどで自動的に開かない場合は、右側のボタンから直接開いてください。
+                        ${t("questionDescription")}
                     </p>
                 `;
 
                 rightSide.innerHTML = `
                     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 15px; width: 100%;">
-                        <a href="${extUrl}" target="_blank" style="display: inline-block; background: #1a3352; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(26, 51, 82, 0.2); transition: opacity 0.2s; text-align: center;">質問フォームを開く</a>
+                        <a href="${extUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #1a3352; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(26, 51, 82, 0.2); transition: opacity 0.2s; text-align: center;">${t("openQuestion")}</a>
                     </div>
                 `;
             } else if (url === 'comments') {
@@ -2013,59 +2307,59 @@
                     leftSide.innerHTML = `
                         <h2 style="font-size: 1.6rem; color: #142d1f; margin-bottom: 20px; border-bottom: 2px solid rgba(20, 45, 31, 0.1); padding-bottom: 10px;">CommentScreen</h2>
                         <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                            CommentScreen を別タブで開いています。
+                            ${t("commentsOpening")}
                         </p>
                         <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                            ポップアップブロックなどで自動的に開かない場合は、右側のボタンをクリックして直接開いてください。
+                            ${t("commentsFallback")}
                         </p>
                     `;
 
                     rightSide.innerHTML = `
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 15px; width: 100%;">
-                            <a href="${extUrl}" target="_blank" style="display: inline-block; background: #142d1f; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(20, 45, 31, 0.2); transition: opacity 0.2s; text-align: center;">CommentScreen を開く</a>
+                            <a href="${extUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #142d1f; color: #faf6ee; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-family: inherit; font-size: 1.0rem; box-shadow: 0 4px 10px rgba(20, 45, 31, 0.2); transition: opacity 0.2s; text-align: center;">${t("openComments")}</a>
                         </div>
                     `;
                 } else {
                     leftSide.innerHTML = `
-                        <h2 style="font-size: 1.6rem; color: #142d1f; margin-bottom: 20px; border-bottom: 2px solid rgba(20, 45, 31, 0.1); padding-bottom: 10px;">Comment Board</h2>
+                        <h2 style="font-size: 1.6rem; color: #142d1f; margin-bottom: 20px; border-bottom: 2px solid rgba(20, 45, 31, 0.1); padding-bottom: 10px;">${t("commentBoard")}</h2>
                         <div id="comment-list-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; max-height: 380px; padding-right: 5px;">
-                            \${createCommentItem("ゲストA", "素晴らしいプレゼンテーションでした！刺激を受けました。", "10分前")}
-                            \${createCommentItem("筑波 花子", "本の3Dアニメーションが非常に美しくて驚きました！", "1時間前")}
-                            \${createCommentItem("大学院生", "TEDxの次のイベント日程を知りたいです。", "3時間前")}
+                            ${createCommentItem(t("guestA"), t("guestAComment"), t("tenMinutesAgo"))}
+                            ${createCommentItem(t("guestB"), t("guestBComment"), t("oneHourAgo"))}
+                            ${createCommentItem(t("graduateStudent"), t("graduateComment"), t("threeHoursAgo"))}
                         </div>
                     `;
 
                     rightSide.innerHTML = `
-                        <h3 style="font-size: 1.1rem; color: #142d1f; margin-bottom: 12px;">コメントを書き込む</h3>
+                        <h3 style="font-size: 1.1rem; color: #142d1f; margin-bottom: 12px;">${t("writeComment")}</h3>
                         <form id="comment-submit-form" onsubmit="event.preventDefault(); handleAddComment();" style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #142d1f;">名前</label>
-                                <input type="text" id="comment-name-input" placeholder="ニックネーム" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #142d1f;">${t("nickname")}</label>
+                                <input type="text" id="comment-name-input" placeholder="${t("nicknamePlaceholder")}" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit;">
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #142d1f;">メッセージ</label>
-                                <textarea id="comment-text-input" rows="5" placeholder="コメント内容を入力してください..." required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit; resize: none;"></textarea>
+                                <label style="display: block; margin-bottom: 4px; font-weight: bold; color: #142d1f;">${t("message")}</label>
+                                <textarea id="comment-text-input" rows="5" placeholder="${t("messagePlaceholder")}" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-family: inherit; resize: none;"></textarea>
                             </div>
-                            <button type="submit" style="background: #142d1f; color: #faf6ee; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; transition: opacity 0.2s;">投稿する</button>
+                            <button type="submit" style="background: #142d1f; color: #faf6ee; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; transition: opacity 0.2s;">${t("post")}</button>
                         </form>
                     `;
                 }
             } else if (url === 'socials') {
                 leftSide.innerHTML = `
-                    <h2 style="font-size: 1.6rem; color: #4f3613; margin-bottom: 20px; border-bottom: 2px solid rgba(79, 54, 19, 0.1); padding-bottom: 10px;">Social Accounts</h2>
+                    <h2 style="font-size: 1.6rem; color: #4f3613; margin-bottom: 20px; border-bottom: 2px solid rgba(79, 54, 19, 0.1); padding-bottom: 10px;">${t("socialsHeading")}</h2>
                     <p style="font-size: 0.95rem; line-height: 1.6; color: #5a544c; margin-bottom: 15px;">
-                        TEDxUTsukubaの最新情報を受け取るために、各種SNSアカウントのフォローをお願いいたします。
+                        ${t("socialsLead")}
                     </p>
                     <p style="font-size: 0.9rem; line-height: 1.6; color: #7a7368;">
-                        イベント写真の公開や、スピーカー紹介、次回の参加申し込みのご案内などを随時アップデートしています。
+                        ${t("socialsBody")}
                     </p>
                 `;
 
                 rightSide.innerHTML = `
                     <div style="display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%;">
-                        ${createSNSLinkCard("Official Website", "tedxutsukuba.com", "https://www.tedxutsukuba.com/", "#4f3613")}
+                        ${createSNSLinkCard(t("officialWebsite"), "tedxutsukuba.com", "https://www.tedxutsukuba.com/", "#4f3613")}
                         ${createSNSLinkCard("Instagram", "@tedxutsukuba", "https://www.instagram.com/tedxutsukuba", "#e1306c")}
-                        ${createSNSLinkCard("X (formerly Twitter)", "@tedxutsukuba", "https://x.com/tedxutsukuba", "#000000")}
+                        ${createSNSLinkCard("X", "@tedxutsukuba", "https://x.com/tedxutsukuba", "#000000")}
                         ${createSNSLinkCard("Facebook", "TEDxUTsukuba", "https://www.facebook.com/TEDxUTsukuba", "#1877f2")}
                     </div>
                 `;
@@ -2101,6 +2395,8 @@
         // UI要素をクリックした際に、後ろの3D空間レイキャスター（pointerdown）が誤反応するのを防ぐ
         document.getElementById('content-overlay').addEventListener('pointerdown', (e) => e.stopPropagation());
         document.getElementById('close-button').addEventListener('pointerdown', (e) => e.stopPropagation());
+        document.getElementById('language-toggle').addEventListener('pointerdown', (e) => e.stopPropagation());
+        document.getElementById('language-toggle').addEventListener('click', toggleLanguage);
 
         window.onload = init;
 
